@@ -143,20 +143,33 @@ def create_file_link(file_name, file_id):
     b64 = base64.b64encode(content.text.encode(content.encoding)).decode()
     link_tag = f'<a href="data:{content_type};base64,{b64}" download="{file_name}">Download Link</a>'
     return link_tag
-
+video_ids = [
+    "500", "501", "502", "602", "503", "604", "505", "605", "506", "606", "507", "607", "508",
+    "608", "509", "609", "510", "610", "511", "611", "512", "612", "513", "613", "514", "614",
+    "515", "615", "616", "517", "617", "518", "618", "519", "520", "521", "621", "522", "622",
+    "523", "623", "524", "624", "525", "625", "526", "527", "528", "628", "529", "629", "530",
+    "630", "531", "532", "632", "533", "633", "634", "639", "640", "641", "642", "643", "544",
+    "644", "545", "645", "546", "646", "547", "647", "548", "648", "549", "649", "550", "650",
+    "551", "552", "553", "653", "554", "555", "556", "656", "557", "657", "558", "658", "559",
+    "560", "561", "562", "662", "563", "663", "564", "565", "566", "567", "568", "569", "570",
+    "571", "572", "573", "574", "575", "576", "577", "578", "579", "580", "780", "581", "582",
+    "583", "584", "585", "586", "587", "588", "589", "590", "591", "592", "593", "594", "595",
+    "695", "596", "696", "597", "697", "498", "504", "499"
+]
 # UI layout
 st.title("Video Course Assistant")
 
 # Top bar layout with Video ID and Language
 col1, col2 = st.columns([1, 1])
 with col1:
-    video_id = st.text_input("Video ID", placeholder="Enter Video ID", value="503")
+    video_id = st.selectbox("Video ID", video_ids, index=video_ids.index("503"))
 with col2:
     language = st.selectbox("Language", ["English", "Hindi", "Telugu", "Tamil", "Malayalam", "Kannada", "Gujarati", "Marathi", "Bengali", "Punjabi"])
 
 # Display session information
 st.write(f"**VIDEO ID**: {video_id}")
 st.write(f"**LANGUAGE**: {language}")
+
 
 # Function buttons
 col4, col5, col6, col7 = st.columns([1, 1, 1, 1])
