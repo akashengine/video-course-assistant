@@ -1,99 +1,91 @@
 import streamlit as st
-from openai import OpenAI
-from thread_manager import ThreadManager
+import openai
+import os
 
-# Initialize OpenAI client
-client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
+# Configure Streamlit page
+st.set_page_config(page_title="Video Course Assistant", page_icon="📹", layout="centered")
 
-# Assistant ID
+# Set up OpenAI API key
+openai.api_key = st.secrets["OPENAI_API_KEY"] if "OPENAI_API_KEY" in st.secrets else os.getenv("OPENAI_API_KEY")
+
+# Define the Assistant ID
 ASSISTANT_ID = "asst_FsFGT6vkPNt1ATj1axikkIzT"
 
-# Initialize ThreadManager
-thread_manager = ThreadManager(client, ASSISTANT_ID)
+# Initialize session state variables
+if "messages" not in st.session_state:
+    st.session_state.messages = []
+if "active_tab" not in st.session_state:
+    st.session_state.active_tab = "Summarize"
 
-# Initialize Streamlit session state for threads
-if "active_thread" not in st.session_state:
-    st.session_state.active_thread = None  # Set to None initially
+# Top bar with video ID, language, and session ID
+st.markdown(
+    f"""
+    <div style='display: flex; justify-content: space-between; padding: 1rem; background-color: #f0f0f0;'>
+        <div>📹 <strong>VIDEO ID:</strong> 312</div>
+        <div>🌐 <strong>LANGUAGE:</strong> English</div>
+        <div>🆔 <strong>Session ID:</strong> 12</div>
+    </div>
+    """,
+    unsafe_allow_html=True
+)
 
-if "threads" not in st.session_state:
-    st.session_state.threads = {}  # Dictionary to store thread IDs and names
+# Tabs for different actions
+tab1, tab2, tab3 = st.columns(3)
+if tab1.button("Summarize"):
+    st.session_state.active_tab = "Summarize"
+if tab2.button("Quiz Me"):
+    st.session_state.active_tab = "Quiz Me"
+if tab3.button("Ask a Question"):
+    st.session_state.active_tab = "Ask a Question"
 
-# Sidebar for thread management
-st.sidebar.title("Chat Threads")
+# Input area for user message
+st.write(f"**Mode:** {st.session_state.active_tab}")
+user_input = st.text_input("Enter your query:", "")
 
-# Button to create a new thread
-if st.sidebar.button("New Thread"):
-    # Create a new thread and set it as the active thread
-    new_thread_id = thread_manager.create_thread()
-    st.session_state.threads[new_thread_id] = f"Thread {len(st.session_state.threads) + 1}"
-    st.session_state.active_thread = new_thread_id
+# Function to interact with OpenAI assistant
+def communicate_with_assistant(prompt):
+    response = None
+    try:
+        # Send the request to OpenAI Assistant
+        response = openai.Assistant.create_run(
+            assistant_id=ASSISTANT_ID,
+            messages=[{"role": "user", "content": prompt}]
+        )
+        # Extract the assistant's reply
+        assistant_reply = response["choices"][0]["message"]["content"]
+        return assistant_reply
+    except Exception as e:
+        st.error(f"Error: {e}")
+        return None
 
-# Dropdown to select an active thread
-if st.session_state.threads:
-    selected_thread_id = st.sidebar.selectbox("Select a Thread", list(st.session_state.threads.keys()), format_func=lambda x: st.session_state.threads[x])
-    if selected_thread_id:
-        st.session_state.active_thread = selected_thread_id
+# Submit button to send the user's input to OpenAI Assistant
+if st.button("Send") and user_input:
+    prompt = ""
+    
+    # Customize prompt based on active tab
+    if st.session_state.active_tab == "Summarize":
+        prompt = f"Summarize the content of video ID 312 in {st.session_state.language}."
+    elif st.session_state.active_tab == "Quiz Me":
+        prompt = f"Generate a quiz based on video ID 312 in {st.session_state.language}."
+    elif st.session_state.active_tab == "Ask a Question":
+        prompt = user_input
+    
+    # Get the assistant's response
+    assistant_response = communicate_with_assistant(prompt)
+    if assistant_response:
+        st.session_state.messages.append({"role": "user", "content": user_input})
+        st.session_state.messages.append({"role": "assistant", "content": assistant_response})
+    else:
+        st.error("Failed to get a response from the assistant.")
 
-    # Display the name of the active thread
-    st.write(f"**Active Thread**: {st.session_state.threads.get(st.session_state.active_thread, 'None')}")
+# Display chat history
+for message in st.session_state.messages:
+    if message["role"] == "user":
+        st.write(f"**You:** {message['content']}")
+    else:
+        st.write(f"**Assistant:** {message['content']}")
 
-    # Sidebar inputs for selecting Video ID, Language, and Request Type
-    video_id = st.sidebar.text_input("Video ID", value="312")
-    language = st.sidebar.selectbox("Select Language", ["English", "Hindi", "Telugu", "Tamil", "Malayalam"])
-    request_type = st.sidebar.radio("Type of Request", ["Summarize", "Quiz Me", "Ask a Question"])
-
-    # Chat Interface
-    st.markdown("### Chat Interface")
-    user_input = st.text_input("Your question/message:")
-
-    # Send button
-    if st.button("Send"):
-        if user_input and st.session_state.active_thread:
-            # Format the prompt with the selected options
-            prompt = f"""
-            Type of Request: {request_type}
-            Video ID: {video_id}
-            Language: {language}
-
-            User Message: {user_input}
-            """
-
-            # Create a message and run the assistant, with error handling for invalid threads
-            try:
-                client.beta.threads.messages.create(
-                    thread_id=st.session_state.active_thread,
-                    role="user",
-                    content=prompt
-                )
-
-                # Run the assistant on the thread and get the response
-                response = client.beta.threads.runs.create(
-                    thread_id=st.session_state.active_thread,
-                    assistant_id=ASSISTANT_ID,
-                )
-
-                # Extract the assistant's response
-                assistant_message = response["messages"][-1]["content"]
-
-                # Update the chat history in the thread manager
-                thread_manager.add_message_to_thread(st.session_state.active_thread, "user", user_input)
-                thread_manager.add_message_to_thread(st.session_state.active_thread, "assistant", assistant_message)
-
-            except Exception as e:
-                st.error(f"Error: {str(e)}")
-                if "No thread found" in str(e):
-                    # If the thread is missing, reset the active thread and prompt to create a new one
-                    st.warning("The current thread is invalid. Please create a new thread.")
-                    st.session_state.active_thread = None
-
-    # Display chat history for the active thread
-    chat_history = thread_manager.get_thread_history(st.session_state.active_thread)
-    for entry in chat_history:
-        if entry["role"] == "user":
-            st.write(f"You: {entry['content']}")
-        else:
-            st.write(f"Assistant: {entry['content']}")
-
-    # Reset button to clear the chat history for the active thread
-    if st.button("Reset Chat"):
-        thread_manager.reset_thread(st.session_state.active_thread)
+# Refresh button to clear the chat
+if st.button("Refresh"):
+    st.session_state.messages = []
+    st.experimental_rerun()
