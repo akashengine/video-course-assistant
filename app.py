@@ -59,13 +59,12 @@ if st.button("Send"):
         """
 
         # Send the request to the OpenAI Assistant in the context of the active thread
-        response = openai.ChatCompletion.create(
-            model="gpt-4",
+        # using the updated Assistant API method
+        response = openai.Assistant.create_run(
+            assistant_id=ASSISTANT_ID,
             messages=[
-                {"role": "system", "content": "You are a helpful assistant."},
                 {"role": "user", "content": prompt}
-            ],
-            assistant_id=ASSISTANT_ID
+            ]
         )
 
         # Extract the assistant's response
@@ -74,6 +73,7 @@ if st.button("Send"):
         # Update the chat history in the thread manager
         thread_manager.add_message_to_thread(st.session_state.active_thread, "user", user_input)
         thread_manager.add_message_to_thread(st.session_state.active_thread, "assistant", assistant_message)
+
 
 # Display chat history for the active thread
 chat_history = thread_manager.get_thread_history(st.session_state.active_thread)
