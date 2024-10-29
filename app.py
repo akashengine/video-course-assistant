@@ -40,32 +40,54 @@ else:
 
 # Function to send message to assistant
 def send_message(prompt):
+    # Create a message in the thread
+    client.beta.threads.messages.create(
+        thread_id=st.session_state.thread_id,
+        role="user",
+        content=prompt
+    )
+    
     # Append the user message to the session state
     st.session_state["messages"].append({"role": "user", "content": prompt})
     st.write(f"**You:** {prompt}")
-
-    # Add a placeholder for the assistant response
-    st.session_state["messages"].append({"role": "assistant", "content": ""})
-
-    # Create a new run and get a response
-    response = client.beta.threads.runs.create(
+    
+    # Create a new run
+    run = client.beta.threads.runs.create(
         thread_id=st.session_state.thread_id,
         assistant_id=ASSISTANT_ID,
     )
-
-    # Retrieve the result of the run
-    run_result = client.beta.threads.runs.retrieve(
-        thread_id=st.session_state.thread_id, run_id=response.id
+    
+    # Wait for run to complete
+    while True:
+        run_status = client.beta.threads.runs.retrieve(
+            thread_id=st.session_state.thread_id,
+            run_id=run.id
+        )
+        if run_status.status == 'completed':
+            break
+        elif run_status.status == 'failed':
+            st.error("Run failed. Please try again.")
+            return
+    
+    # Retrieve messages after run completes
+    messages = client.beta.threads.messages.list(
+        thread_id=st.session_state.thread_id
     )
-
-    # Access the assistant's response text content directly
-    if run_result.content and len(run_result.content) > 0:
-        assistant_response = run_result.content[0].text.value
+    
+    # Get the latest assistant message
+    for message in messages:
+        if message.role == "assistant":
+            assistant_response = message.content[0].text.value
+            break
     else:
         assistant_response = "No response received"
-
-    # Update the assistant response in session state
-    st.session_state["messages"][-1]["content"] = assistant_response
+    
+    # Update the conversation in session state
+    st.session_state["messages"].append({
+        "role": "assistant",
+        "content": assistant_response
+    })
+    
     st.write(f"**Assistant:** {assistant_response}")
 
 # If there's user input, send it to the assistant
