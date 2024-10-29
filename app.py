@@ -198,7 +198,7 @@ if st.session_state.get("chat_mode", False) and st.session_state["current_thread
 
     # Use a form to get user input and submit
     with st.form(key='chat_form', clear_on_submit=True):
-        user_message = st.text_input("Your message:", key="user_message_input")
+        user_message = st.text_input("Your message: Or Enter Quit", key="user_message_input")
         submit_button = st.form_submit_button(label='Send')
 
         if submit_button and user_message:
