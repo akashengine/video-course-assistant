@@ -10,15 +10,35 @@ openai_client = openai.Client(api_key=os.environ.get("OPENAI_API_KEY"))
 assistant = openai_client.beta.assistants.retrieve("asst_FsFGT6vkPNt1ATj1axikkIzT")
 
 # Create the Streamlit app layout
-st.title("Data Journalist Assistant")
-st.subheader("Ask questions to the assistant:")
+st.title("Video Course Assistant")
+
+# Input for Video ID
+video_id = st.text_input("Video ID", placeholder="Enter Video ID", value="312")
+
+# Dropdown for Language selection
+language = st.selectbox(
+    "Language",
+    ["English", "Hindi", "Telugu", "Tamil", "Malayalam", "Kannada", "Gujarati", "Marathi", "Bengali", "Punjabi"]
+)
 
 # Initialize session state to keep track of chat messages
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-# Input box for user message
-user_input = st.text_input("Enter your message:", "")
+# Display current session information
+st.write(f"**Video ID**: {video_id}")
+st.write(f"**Language**: {language}")
+
+# Add buttons for different functionalities
+col1, col2, col3, col4 = st.columns([1, 1, 1, 0.2])
+if col1.button("SUMMARISE"):
+    user_input = "Summarise the content of the video."
+elif col2.button("QUIZ ME"):
+    user_input = "Create a quiz based on the video content."
+elif col3.button("ASK A QUESTION"):
+    user_input = st.text_input("Ask a question about the video:", "")
+else:
+    user_input = ""
 
 # Function to interact with the assistant
 def get_assistant_response(prompt):
@@ -46,18 +66,16 @@ def get_assistant_response(prompt):
     return assistant_reply
 
 # When the user submits a message
-if st.button("Send") and user_input:
+if (user_input and user_input != ""):
     # Display the user input
     st.session_state.messages.append({"role": "user", "content": user_input})
     
     # Get the assistant response
     assistant_response = get_assistant_response(user_input)
     st.session_state.messages.append({"role": "assistant", "content": assistant_response})
-    
-    # Clear the input box for the next message
-    st.empty()
 
 # Display the conversation history
+st.write("### Chat History")
 for message in st.session_state.messages:
     if message["role"] == "user":
         st.write(f"**You:** {message['content']}")
