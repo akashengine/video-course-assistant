@@ -1,21 +1,20 @@
-# app.py
-
 import streamlit as st
 from openai import OpenAI
 from thread_manager import ThreadManager
 
-# Initialize the OpenAI client with the API key from Streamlit secrets
+# Initialize OpenAI client
 client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 
-# Define the assistant ID
+# Assistant ID
 ASSISTANT_ID = "asst_FsFGT6vkPNt1ATj1axikkIzT"
 
-# Initialize the ThreadManager with the assistant ID and client
+# Initialize ThreadManager
 thread_manager = ThreadManager(client, ASSISTANT_ID)
 
 # Initialize Streamlit session state for threads
 if "active_thread" not in st.session_state:
-    st.session_state.active_thread = None  # Currently selected thread
+    st.session_state.active_thread = None  # Set to None initially
+
 if "threads" not in st.session_state:
     st.session_state.threads = {}  # Dictionary to store thread IDs and names
 
@@ -36,10 +35,10 @@ if st.session_state.threads:
         st.session_state.active_thread = selected_thread_id
 
     # Display the name of the active thread
-    st.write(f"**Active Thread**: {st.session_state.threads[st.session_state.active_thread]}")
+    st.write(f"**Active Thread**: {st.session_state.threads.get(st.session_state.active_thread, 'None')}")
 
     # Sidebar inputs for selecting Video ID, Language, and Request Type
-    video_id = st.sidebar.text_input("Video ID", value="312")  # Default video ID for testing
+    video_id = st.sidebar.text_input("Video ID", value="312")
     language = st.sidebar.selectbox("Select Language", ["English", "Hindi", "Telugu", "Tamil", "Malayalam"])
     request_type = st.sidebar.radio("Type of Request", ["Summarize", "Quiz Me", "Ask a Question"])
 
@@ -59,25 +58,33 @@ if st.session_state.threads:
             User Message: {user_input}
             """
 
-            # Create a message in the active thread
-            client.beta.threads.messages.create(
-                thread_id=st.session_state.active_thread,
-                role="user",
-                content=prompt
-            )
+            # Create a message and run the assistant, with error handling for invalid threads
+            try:
+                client.beta.threads.messages.create(
+                    thread_id=st.session_state.active_thread,
+                    role="user",
+                    content=prompt
+                )
 
-            # Run the assistant on the thread and get the response
-            response = client.beta.threads.runs.create(
-                thread_id=st.session_state.active_thread,
-                assistant_id=ASSISTANT_ID,
-            )
+                # Run the assistant on the thread and get the response
+                response = client.beta.threads.runs.create(
+                    thread_id=st.session_state.active_thread,
+                    assistant_id=ASSISTANT_ID,
+                )
 
-            # Extract the assistant's response
-            assistant_message = response["messages"][-1]["content"]
+                # Extract the assistant's response
+                assistant_message = response["messages"][-1]["content"]
 
-            # Update the chat history in the thread manager
-            thread_manager.add_message_to_thread(st.session_state.active_thread, "user", user_input)
-            thread_manager.add_message_to_thread(st.session_state.active_thread, "assistant", assistant_message)
+                # Update the chat history in the thread manager
+                thread_manager.add_message_to_thread(st.session_state.active_thread, "user", user_input)
+                thread_manager.add_message_to_thread(st.session_state.active_thread, "assistant", assistant_message)
+
+            except Exception as e:
+                st.error(f"Error: {str(e)}")
+                if "No thread found" in str(e):
+                    # If the thread is missing, reset the active thread and prompt to create a new one
+                    st.warning("The current thread is invalid. Please create a new thread.")
+                    st.session_state.active_thread = None
 
     # Display chat history for the active thread
     chat_history = thread_manager.get_thread_history(st.session_state.active_thread)
