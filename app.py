@@ -44,32 +44,30 @@ elif st.button("Ask a Question"):
 
 # Function to send message to assistant
 def send_message(prompt):
-    # Append the user message to the session state
+    # Append the user message to the session state for tracking
     st.session_state["messages"].append({"role": "user", "content": prompt})
 
     # Display user message in chat
     st.write(f"**You:** {prompt}")
 
-    # Call assistant and get response
+    # Add a placeholder for the assistant response
+    st.session_state["messages"].append({"role": "assistant", "content": ""})
+
+    # Create a new run
     response = client.beta.threads.runs.create(
-    thread_id=st.session_state.thread_id,
-    assistant_id=ASSISTANT_ID,
-    messages=[{"role": "user", "content": prompt}],
-    temperature=1.0
-)
+        thread_id=st.session_state.thread_id,
+        assistant_id=ASSISTANT_ID,
+    )
 
-    # Extract the response content and append it
-    assistant_response = response["output"]["content"]
-    st.session_state["messages"].append({"role": "assistant", "content": assistant_response})
+    # Fetch the run result
+    run_result = client.beta.threads.runs.retrieve(
+        thread_id=st.session_state.thread_id,
+        run_id=response.id
+    )
 
-# If there's user input, send it to the assistant
-if user_input:
-    send_message(user_input)
+    # Assuming the response content can be accessed directly
+    assistant_response = run_result.get("content", "No response received")
 
-# Display the conversation history
-st.write("### Chat History")
-for message in st.session_state["messages"]:
-    if message["role"] == "user":
-        st.write(f"**You:** {message['content']}")
-    else:
-        st.write(f"**Assistant:** {message['content']}")
+    # Update the session state with the assistant's response
+    st.session_state["messages"][-1]["content"] = assistant_response
+    st.write(f"**Assistant:** {assistant_response}")
