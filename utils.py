@@ -1,38 +1,26 @@
-# utils.py
+import base64
+import os
+import streamlit as st
+from openai import OpenAI
+from openai.types.beta.threads.text_delta_block import TextDeltaBlock 
 
-import openai
+# Initialize OpenAI client with API key
+client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 
-def fetch_openai_response(assistant_id, request_type, video_id, language, user_input):
-    """
-    Sends a request to the OpenAI Assistant and retrieves the response.
+# Custom StreamHandler for streaming
+class StreamHandler:
+    def __init__(self):
+        self.response_text = ""
+    
+    def handle_event(self, event):
+        # Handle streaming text deltas and update assistant's message in real-time
+        if isinstance(event, TextDeltaBlock):
+            if event.text:
+                self.response_text += event.text.value
+                st.session_state["messages"][-1]["content"] = self.response_text
+                st.experimental_rerun()  # Update the chat UI in real-time
 
-    Parameters:
-        assistant_id (str): The unique assistant ID provided by OpenAI.
-        request_type (str): Type of request (e.g., Summarize, Quiz Me, Ask a Question).
-        video_id (str): The video ID to pass along in the prompt.
-        language (str): Language preference for the response.
-        user_input (str): User's message or question.
-
-    Returns:
-        str: The response from the OpenAI Assistant.
-    """
-    # Format the prompt dynamically based on inputs
-    prompt = f"""
-    Type of Request: {request_type}
-    Video ID: {video_id}
-    Language: {language}
-
-    User Message: {user_input}
-    """
-
-    # Send request to OpenAI Assistant using the new API method
-    response = openai.Assistant.create_run(
-        assistant_id=assistant_id,
-        messages=[
-            {"role": "user", "content": prompt}
-        ]
-    )
-
-    # Extract the assistant's response
-    assistant_message = response["choices"][0]["message"]["content"]
-    return assistant_message
+# Function to check if a prompt triggers the moderation endpoint
+def moderation_endpoint(prompt):
+    response = client.moderations.create(input=prompt)
+    return response.results[0].flagged
