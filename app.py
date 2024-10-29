@@ -59,8 +59,11 @@ def send_message(prompt):
         assistant_id=ASSISTANT_ID,
         event_handler=handler,
         temperature=1.0
-    ):
-        pass  # The stream will invoke `handler.handle_event` for each event automatically
+    ) as stream:
+        for event in stream:
+            print("Processing event in stream...")  # Debugging
+            handler.handle_event(event)  # Process each event as it comes in
+
 
 # If there's user input, send it to the assistant
 if user_input:
