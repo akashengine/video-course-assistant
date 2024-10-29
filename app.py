@@ -94,14 +94,16 @@ if selected_thread:
     st.session_state["current_thread_id"] = selected_thread
 
 # EventHandler class to handle assistant events and tool functionality
+# EventHandler class to handle assistant events and tool functionality
 class EventHandler(AssistantEventHandler):
     def __init__(self, thread_id):
+        super().__init__()  # Call the superclass's __init__ method
         self.thread_id = thread_id
         self.current_message = ""
         self.current_markdown = None
         self.chat_log = st.session_state["threads"][thread_id]
         self.tool_calls = st.session_state.get("tool_calls", {})
-    
+        
     @override
     def on_event(self, event):
         pass
@@ -136,6 +138,7 @@ class EventHandler(AssistantEventHandler):
     def on_tool_call_done(self, tool_call):
         # Handle tool call completion if needed
         pass
+
 
 # Function to format annotations (from the second code)
 def format_annotation(text):
