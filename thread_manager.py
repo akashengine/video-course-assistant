@@ -1,16 +1,16 @@
 # thread_manager.py
 
-import openai
 from uuid import uuid4
 
 class ThreadManager:
-    def __init__(self, assistant_id):
-        self.threads = {}
+    def __init__(self, client, assistant_id):
+        self.client = client
         self.assistant_id = assistant_id
+        self.threads = {}
 
     def create_thread(self):
-        # Create a unique ID for each new thread
-        thread = openai.Threads.create()
+        # Create a new thread using the client and save its ID
+        thread = self.client.beta.threads.create()
         thread_id = thread["id"]
         self.threads[thread_id] = {"history": []}
         return thread_id
