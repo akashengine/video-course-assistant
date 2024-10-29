@@ -18,3 +18,9 @@ class StreamHandler:
                 self.response_text += event.text["value"]
                 st.session_state["messages"][-1]["content"] = self.response_text
                 st.experimental_rerun()  # Update the chat UI in real-time
+
+# Function to check if a prompt triggers the moderation endpoint
+def moderation_endpoint(prompt):
+    client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
+    response = client.moderations.create(input=prompt)
+    return response.results[0].flagged
