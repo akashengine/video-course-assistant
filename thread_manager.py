@@ -1,7 +1,5 @@
 # thread_manager.py
 
-from uuid import uuid4
-
 class ThreadManager:
     def __init__(self, client, assistant_id):
         self.client = client
