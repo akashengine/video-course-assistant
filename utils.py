@@ -1,13 +1,10 @@
+import openai
 import streamlit as st
-from openai.types.beta.threads.text_delta_block import TextDeltaBlock
 
-class StreamHandler:
-    def __init__(self):
-        self.response_text = ""
+# Initialize OpenAI client with API key
+client = openai.OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 
-    def handle_event(self, event):
-        # Handle text deltas to simulate streaming
-        if isinstance(event, TextDeltaBlock) and event.text:
-            self.response_text += event.text.value
-            st.session_state["messages"][-1]["content"] = self.response_text
-            st.experimental_rerun()  # Update UI
+# Function to check if a prompt triggers the moderation endpoint
+def moderation_endpoint(prompt):
+    response = client.Moderation.create(input=prompt)
+    return response["results"][0]["flagged"]
