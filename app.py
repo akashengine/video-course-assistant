@@ -5,7 +5,7 @@ import json
 import time
 
 import streamlit as st
-st.set_page_config(page_title="Video Course Assistant", layout="wide")  # Move this line up
+st.set_page_config(page_title="Video Course Assistant", layout="wide")
 
 from openai import AssistantEventHandler
 from typing_extensions import override
@@ -204,19 +204,21 @@ if st.session_state.get("chat_mode", False) and st.session_state["current_thread
         else:
             st.write(f"**Assistant:** {message['content']}")
 
-    # Get user input
-    user_message = st.text_input("Your message:", key="user_message_input")
-    if user_message:
-        if user_message.strip().lower() == "quit":
-            st.session_state["chat_mode"] = False
-            st.write("Chat ended.")
-        else:
-            # Include the video ID in the prompt
-            prompt = f"Question about video ID {st.session_state['video_id']} in {st.session_state['language']}: {user_message}"
-            # Send the message
-            send_message(st.session_state["current_thread_id"], prompt)
-            # Clear the input field
-            st.session_state["user_message_input"] = ""
+    # Use a form to get user input and submit
+    with st.form(key='chat_form', clear_on_submit=True):
+        user_message = st.text_input("Your message:", key="user_message_input")
+        submit_button = st.form_submit_button(label='Send')
+
+        if submit_button and user_message:
+            if user_message.strip().lower() == "quit":
+                st.session_state["chat_mode"] = False
+                st.write("Chat ended.")
+            else:
+                # Include the video ID in the prompt
+                prompt = f"Question about video ID {st.session_state['video_id']} in {st.session_state['language']}: {user_message}"
+                # Send the message
+                send_message(st.session_state["current_thread_id"], prompt)
+                # No need to clear the input field manually; it's handled by clear_on_submit
 
 # Else, display the conversation history for the selected thread
 else:
