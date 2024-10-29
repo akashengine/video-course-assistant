@@ -1,4 +1,5 @@
 import streamlit as st
+import time
 from utils import client  # Assuming utils.client is configured correctly
 
 # Set Streamlit page configuration
@@ -17,13 +18,19 @@ def init_session_state():
 # Initialize session state
 init_session_state()
 
-# Function to create a new thread
+# Function to create a new thread and add initial message
 def create_new_thread(prompt):
-    thread = client.beta.threads.create(messages=[{"role": "user", "content": prompt}])
-    thread_id = thread.id
-    st.session_state["threads"][thread_id] = [{"role": "user", "content": prompt}]
-    st.session_state["current_thread_id"] = thread_id
-    return thread_id
+    try:
+        # Create a new thread with the initial message
+        thread = client.beta.threads.create(messages=[{"role": "user", "content": prompt}])
+        thread_id = thread.id
+        # Store thread and initial message
+        st.session_state["threads"][thread_id] = [{"role": "user", "content": prompt}]
+        st.session_state["current_thread_id"] = thread_id
+        return thread_id
+    except Exception as e:
+        st.error(f"Error creating thread: {e}")
+        return None
 
 # UI layout
 st.title("Video Course Assistant")
@@ -41,15 +48,15 @@ with col3:
 col4, col5, col6, col7 = st.columns([1, 1, 1, 1])
 if col4.button("Summarise"):
     prompt = f"Summarise the content of the video with ID {video_id} in {language}."
-    create_new_thread(prompt)
+    thread_id = create_new_thread(prompt)
 if col5.button("Quiz Me"):
     prompt = f"Create a quiz based on the video with ID {video_id} in {language}."
-    create_new_thread(prompt)
+    thread_id = create_new_thread(prompt)
 if col6.button("Ask a Question"):
     question = st.text_input("Type your question here:")
     if question:
         prompt = question
-        create_new_thread(prompt)
+        thread_id = create_new_thread(prompt)
 if col7.button("Reset"):
     st.session_state["threads"].clear()
     st.session_state["current_thread_id"] = None
@@ -62,34 +69,39 @@ st.session_state["current_thread_id"] = selected_thread
 
 # Function to send message to the assistant
 def send_message(thread_id, prompt):
-    client.beta.threads.messages.create(
-        thread_id=thread_id,
-        role="user",
-        content=prompt
-    )
-    
-    # Run the assistant and retrieve response
-    run = client.beta.threads.runs.create(
-        thread_id=thread_id,
-        assistant_id=ASSISTANT_ID
-    )
-    
-    # Poll for the run to complete
-    while True:
-        run_status = client.beta.threads.runs.retrieve(thread_id=thread_id, run_id=run.id)
-        if run_status.status == "completed":
-            break
-        elif run_status.status == "failed":
-            st.error("Run failed. Please try again.")
-            return
+    try:
+        # Send message to the assistant in the specified thread
+        client.beta.threads.messages.create(
+            thread_id=thread_id,
+            role="user",
+            content=prompt
+        )
+        
+        # Create a new run and wait for completion
+        run = client.beta.threads.runs.create(
+            thread_id=thread_id,
+            assistant_id=ASSISTANT_ID
+        )
+        
+        # Polling loop to wait for run completion
+        while True:
+            run_status = client.beta.threads.runs.retrieve(thread_id=thread_id, run_id=run.id)
+            if run_status.status == "completed":
+                break
+            elif run_status.status == "failed":
+                st.error("Run failed. Please try again.")
+                return
+            time.sleep(1)  # Adding a small delay to avoid rapid polling
 
-    # Retrieve messages after run completes
-    messages = client.beta.threads.messages.list(thread_id=thread_id)
-    
-    # Get the latest assistant message
-    assistant_response = next((message.content[0].text.value for message in messages if message.role == "assistant"), "No response received")
-    st.session_state["threads"][thread_id].append({"role": "assistant", "content": assistant_response})
-    st.write(f"**Assistant:** {assistant_response}")
+        # Retrieve messages after run completes
+        messages = client.beta.threads.messages.list(thread_id=thread_id)
+        
+        # Get the latest assistant message
+        assistant_response = next((message.content[0].text.value for message in messages if message.role == "assistant"), "No response received")
+        st.session_state["threads"][thread_id].append({"role": "assistant", "content": assistant_response})
+        st.write(f"**Assistant:** {assistant_response}")
+    except Exception as e:
+        st.error(f"Error sending message: {e}")
 
 # Display the conversation history for the selected thread
 if selected_thread:
