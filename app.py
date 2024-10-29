@@ -1,22 +1,21 @@
 import streamlit as st
 from openai import OpenAI
-from utils import StreamHandler, moderation_endpoint
+from utils import StreamHandler
 
 # Set Streamlit page config
 st.set_page_config(page_title="Video Course Assistant", layout='wide')
 
-# Initialize OpenAI client with the API key
-OPENAI_API_KEY = st.secrets["OPENAI_API_KEY"]
+# Initialize OpenAI client with API key
+client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 ASSISTANT_ID = st.secrets["OPENAI_ASSISTANT_ID"]
-st.session_state["client"] = OpenAI(api_key=OPENAI_API_KEY)
 
 # Helper function to initialize session state
 def init_session_state():
     if "messages" not in st.session_state:
         st.session_state["messages"] = []
     if "thread_id" not in st.session_state:
-        thread = st.session_state["client"].beta.threads.create()
-        st.session_state["thread_id"] = thread.id
+        thread = client.beta.threads.create()
+        st.session_state.thread_id = thread.id
 
 # Initialize session state
 init_session_state()
@@ -31,15 +30,15 @@ st.write(f"**Video ID**: {video_id}")
 st.write(f"**Language**: {language}")
 
 # Buttons for different functionalities
-user_input = None
 if st.button("Summarise"):
     user_input = f"Summarise the content of the video with ID {video_id} in {language}."
 elif st.button("Quiz Me"):
     user_input = f"Create a quiz based on the video with ID {video_id} in {language}."
 elif st.button("Ask a Question"):
     user_input = st.text_input("Type your question here:")
+else:
+    user_input = None
 
-# Function to send message to assistant
 # Function to send message to assistant
 def send_message(prompt):
     # Append the user message to the session state
