@@ -40,6 +40,7 @@ elif st.button("Ask a Question"):
     user_input = st.text_input("Type your question here:")
 
 # Function to send message to assistant
+# Function to send message to assistant
 def send_message(prompt):
     # Append the user message to the session state
     st.session_state["messages"].append({"role": "user", "content": prompt})
@@ -53,15 +54,14 @@ def send_message(prompt):
     # Create a StreamHandler instance
     handler = StreamHandler()
 
-    # Run the assistant and stream the response
-    with st.session_state["client"].beta.threads.runs.stream(
-        thread_id=st.session_state["thread_id"],
+    # Run the assistant and stream the response, passing only the handler
+    with client.beta.threads.runs.stream(
+        thread_id=st.session_state.thread_id,
         assistant_id=ASSISTANT_ID,
         event_handler=handler,
         temperature=1.0
-    ) as stream:
-        for event in stream:
-            handler.handle_event(event)  # Process each event as it comes in
+    ):
+        pass  # The stream will invoke `handler.handle_event` for each event automatically
 
 # If there's user input, send it to the assistant
 if user_input:
