@@ -1,91 +1,89 @@
-import streamlit as st
-import openai
+"""
+    This file demonstrates how to use the OpenAI Assistants API with Streamlit.
+    Users upload a CSV and the assistant writes an article about the data. For
+    this to work, you'll need to:
+
+    1. Install the streamlit and openai packages
+    2. Get an OpenAI API key
+    3. Set an environment variable called OPENAI_API_KEY with your API key
+    4. Create an assistant with Code Interpreter on, and this system message:
+    "You are an experienced data journalist. You receive a CSV of data from a
+    user. You write code to find interesting patterns in the data. You choose
+    the most interesting of these patterns and write a 250-word article about
+    them. You write the headline for the article and then the article itself.
+    You do not ask for feedback from the user at any point. You independently
+    look for trends, independently write the article, and then provide the
+    article to the user to review."
+
+    Once you've done that, replace the <assistant_id> in the code below with 
+    your own assistant ID. Then run the code with streamlit run <filename.py>.
+
+"""
+
+
 import os
+import time
 
-# Configure Streamlit page
-st.set_page_config(page_title="Video Course Assistant", page_icon="📹", layout="centered")
+import openai
+import streamlit as st
 
-# Set up OpenAI API key
-openai.api_key = st.secrets["OPENAI_API_KEY"] if "OPENAI_API_KEY" in st.secrets else os.getenv("OPENAI_API_KEY")
+# Create an OpenAI client with your API key
+openai_client = openai.Client(api_key=os.environ.get("OPENAI_API_KEY"))
 
-# Define the Assistant ID
-ASSISTANT_ID = "asst_FsFGT6vkPNt1ATj1axikkIzT"
-
-# Initialize session state variables
-if "messages" not in st.session_state:
-    st.session_state.messages = []
-if "active_tab" not in st.session_state:
-    st.session_state.active_tab = "Summarize"
-
-# Top bar with video ID, language, and session ID
-st.markdown(
-    f"""
-    <div style='display: flex; justify-content: space-between; padding: 1rem; background-color: #f0f0f0;'>
-        <div>📹 <strong>VIDEO ID:</strong> 312</div>
-        <div>🌐 <strong>LANGUAGE:</strong> English</div>
-        <div>🆔 <strong>Session ID:</strong> 12</div>
-    </div>
-    """,
-    unsafe_allow_html=True
+# Retrieve the assistant you want to use
+assistant = openai_client.beta.assistants.retrieve(
+    "<assistant_id>"
 )
 
-# Tabs for different actions
-tab1, tab2, tab3 = st.columns(3)
-if tab1.button("Summarize"):
-    st.session_state.active_tab = "Summarize"
-if tab2.button("Quiz Me"):
-    st.session_state.active_tab = "Quiz Me"
-if tab3.button("Ask a Question"):
-    st.session_state.active_tab = "Ask a Question"
+# Create the title and subheader for the Streamlit page
+st.title("Data Journalist")
+st.subheader("Upload a CSV and get the story within:")
 
-# Input area for user message
-st.write(f"**Mode:** {st.session_state.active_tab}")
-user_input = st.text_input("Enter your query:", "")
+# Create a file input for the user to upload a CSV
+uploaded_file = st.file_uploader(
+    "Upload a CSV", type="csv", label_visibility="collapsed"
+)
 
-# Function to interact with OpenAI assistant
-def communicate_with_assistant(prompt):
-    response = None
-    try:
-        # Send the request to OpenAI Assistant
-        response = openai.Assistant.create_run(
-            assistant_id=ASSISTANT_ID,
-            messages=[{"role": "user", "content": prompt}]
+# If the user has uploaded a file, start the assistant process...
+if uploaded_file is not None:
+    # Create a status indicator to show the user the assistant is working
+    with st.status("Starting work...", expanded=False) as status_box:
+        # Upload the file to OpenAI
+        file = openai_client.files.create(
+            file=uploaded_file, purpose="assistants"
         )
-        # Extract the assistant's reply
-        assistant_reply = response["choices"][0]["message"]["content"]
-        return assistant_reply
-    except Exception as e:
-        st.error(f"Error: {e}")
-        return None
 
-# Submit button to send the user's input to OpenAI Assistant
-if st.button("Send") and user_input:
-    prompt = ""
-    
-    # Customize prompt based on active tab
-    if st.session_state.active_tab == "Summarize":
-        prompt = f"Summarize the content of video ID 312 in {st.session_state.language}."
-    elif st.session_state.active_tab == "Quiz Me":
-        prompt = f"Generate a quiz based on video ID 312 in {st.session_state.language}."
-    elif st.session_state.active_tab == "Ask a Question":
-        prompt = user_input
-    
-    # Get the assistant's response
-    assistant_response = communicate_with_assistant(prompt)
-    if assistant_response:
-        st.session_state.messages.append({"role": "user", "content": user_input})
-        st.session_state.messages.append({"role": "assistant", "content": assistant_response})
-    else:
-        st.error("Failed to get a response from the assistant.")
+        # Create a new thread with a message that has the uploaded file's ID
+        thread = openai_client.beta.threads.create(
+            messages=[
+                {
+                    "role": "user",
+                    "content": "Write an article about this data.",
+                    "file_ids": [file.id],
+                }
+            ]
+        )
 
-# Display chat history
-for message in st.session_state.messages:
-    if message["role"] == "user":
-        st.write(f"**You:** {message['content']}")
-    else:
-        st.write(f"**Assistant:** {message['content']}")
+        # Create a run with the new thread
+        run = openai_client.beta.threads.runs.create(
+            thread_id=thread.id,
+            assistant_id=assistant.id,
+        )
 
-# Refresh button to clear the chat
-if st.button("Refresh"):
-    st.session_state.messages = []
-    st.experimental_rerun()
+        # Check periodically whether the run is done, and update the status
+        while run.status != "completed":
+            time.sleep(5)
+            status_box.update(label=f"{run.status}...", state="running")
+            run = openai_client.beta.threads.runs.retrieve(
+                thread_id=thread.id, run_id=run.id
+            )
+
+        # Once the run is complete, update the status box and show the content
+        status_box.update(label="Complete", state="complete", expanded=True)
+        messages = openai_client.beta.threads.messages.list(
+            thread_id=thread.id
+        )
+        st.markdown(messages.data[0].content[0].text.value)
+
+        # Delete the uploaded file from OpenAI
+        openai_client.files.delete(file.id)
