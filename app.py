@@ -21,50 +21,22 @@ init_session_state()
 
 # UI layout
 st.title("Video Course Assistant")
+video_id = st.text_input("Video ID", placeholder="Enter Video ID", value="503")
+language = st.selectbox("Language", ["English", "Hindi", "Telugu", "Tamil", "Malayalam", "Kannada", "Gujarati", "Marathi", "Bengali", "Punjabi"])
 
-# Header section with Video ID, Language, and Session ID
-col1, col2, col3 = st.columns([1, 1, 1])
-with col1:
-    video_id = st.text_input("Video ID", placeholder="Enter Video ID", value="312", label_visibility="collapsed")
-    st.write(f"**VIDEO ID**: {video_id}")
+# Display session information
+st.write(f"**Video ID**: {video_id}")
+st.write(f"**Language**: {language}")
 
-with col2:
-    language = st.selectbox("Language", ["English", "Hindi", "Telugu", "Tamil", "Malayalam", "Kannada", "Gujarati", "Marathi", "Bengali", "Punjabi"], label_visibility="collapsed")
-    st.write(f"**LANGUAGE**: {language}")
-
-with col3:
-    session_id = st.text_input("Session ID", placeholder="Session ID", value="12", label_visibility="collapsed")
-    st.write(f"**Session ID**: {session_id}")
-
-# Functionality buttons and refresh icon in a row
-button_col1, button_col2, button_col3, refresh_col = st.columns([1, 1, 1, 0.1])
-with button_col1:
-    if st.button("SUMMARISE"):
-        user_input = f"Summarise the content of the video with ID {video_id} in {language}."
-    else:
-        user_input = None
-
-with button_col2:
-    if st.button("QUIZ ME"):
-        user_input = f"Create a quiz based on the video with ID {video_id} in {language}."
-    else:
-        user_input = None
-
-with button_col3:
-    if st.button("ASK A QUESTION"):
-        user_input = st.text_input("Type your question here:", key="question_input")
-    else:
-        user_input = None
-
-with refresh_col:
-    if st.button("🔄", key="refresh"):
-        st.session_state["messages"] = []
-        st.write("Chat reset.")
-
-# Chat area for displaying conversation
-st.write("### Chat Area")
-chat_placeholder = st.empty()
-chat_container = chat_placeholder.container()
+# Buttons for different functionalities
+if st.button("Summarise"):
+    user_input = f"Summarise the content of the video with ID {video_id} in {language}."
+elif st.button("Quiz Me"):
+    user_input = f"Create a quiz based on the video with ID {video_id} in {language}."
+elif st.button("Ask a Question"):
+    user_input = st.text_input("Type your question here:")
+else:
+    user_input = None
 
 # Function to send message to assistant
 def send_message(prompt):
@@ -77,7 +49,7 @@ def send_message(prompt):
     
     # Append the user message to the session state
     st.session_state["messages"].append({"role": "user", "content": prompt})
-    chat_container.write(f"**You:** {prompt}")
+    st.write(f"**You:** {prompt}")
     
     # Create a new run
     run = client.beta.threads.runs.create(
@@ -116,15 +88,16 @@ def send_message(prompt):
         "content": assistant_response
     })
     
-    chat_container.write(f"**Assistant:** {assistant_response}")
+    st.write(f"**Assistant:** {assistant_response}")
 
 # If there's user input, send it to the assistant
 if user_input:
     send_message(user_input)
 
 # Display the conversation history
+st.write("### Chat History")
 for message in st.session_state["messages"]:
     if message["role"] == "user":
-        chat_container.write(f"**You:** {message['content']}")
+        st.write(f"**You:** {message['content']}")
     else:
-        chat_container.write(f"**Assistant:** {message['content']}")
+        st.write(f"**Assistant:** {message['content']}")
