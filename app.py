@@ -53,20 +53,19 @@ def send_message(prompt):
 
     # Retrieve the result of the run
     run_result = client.beta.threads.runs.retrieve(
-        thread_id=st.session_state.thread_id,
-        run_id=response.id
+        thread_id=st.session_state.thread_id, run_id=response.id
     )
 
-    # Extract the assistant's response content
-    assistant_response = run_result.get("content", "No response received")
+    # Access the assistant's response text content directly
+    if run_result.content and len(run_result.content) > 0:
+        assistant_response = run_result.content[0].text.value
+    else:
+        assistant_response = "No response received"
 
     # Update the assistant response in session state
     st.session_state["messages"][-1]["content"] = assistant_response
     st.write(f"**Assistant:** {assistant_response}")
 
-# If there's user input, send it to the assistant
-if user_input:
-    send_message(user_input)
 
 # Display the conversation history
 st.write("### Chat History")
