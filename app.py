@@ -52,11 +52,11 @@ def send_message(prompt):
 
     # Call assistant and get response
     response = client.beta.threads.runs.create(
-        thread_id=st.session_state.thread_id,
-        assistant_id=ASSISTANT_ID,
-        input={"content": prompt},
-        temperature=1.0
-    )
+    thread_id=st.session_state.thread_id,
+    assistant_id=ASSISTANT_ID,
+    messages=[{"role": "user", "content": prompt}],
+    temperature=1.0
+)
 
     # Extract the response content and append it
     assistant_response = response["output"]["content"]
