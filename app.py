@@ -32,11 +32,15 @@ st.write(f"**Language**: {language}")
 # Add buttons for different functionalities
 col1, col2, col3, col4 = st.columns([1, 1, 1, 0.2])
 if col1.button("SUMMARISE"):
-    user_input = "Summarise the content of the video."
+    user_input = f"Summarise the content of the video with ID {video_id} in {language}."
 elif col2.button("QUIZ ME"):
-    user_input = "Create a quiz based on the video content."
+    user_input = f"Create a quiz based on the video with ID {video_id} in {language}."
 elif col3.button("ASK A QUESTION"):
-    user_input = st.text_input("Ask a question about the video:", "")
+    question = st.text_input("Ask a question about the video:", "")
+    if question:
+        user_input = f"In {language}, answer the following question about video ID {video_id}: {question}"
+    else:
+        user_input = ""
 else:
     user_input = ""
 
@@ -66,7 +70,7 @@ def get_assistant_response(prompt):
     return assistant_reply
 
 # When the user submits a message
-if (user_input and user_input != ""):
+if user_input:
     # Display the user input
     st.session_state.messages.append({"role": "user", "content": user_input})
     
