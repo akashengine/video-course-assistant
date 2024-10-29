@@ -1,26 +1,28 @@
 import streamlit as st
 from openai import OpenAI
-from utils import init_session_state
+from utils import client  # import client directly from utils
 
-# Set Streamlit page config
-st.set_page_config(page_title="Video Course Assistant", layout="wide")
+# Set Streamlit page configuration
+st.set_page_config(page_title="Video Course Assistant", layout='wide')
 
-# Get secrets
-OPENAI_API_KEY = st.secrets["OPENAI_API_KEY"]
+# Get assistant ID from secrets
 ASSISTANT_ID = st.secrets["OPENAI_ASSISTANT_ID"]
 
-# Initialize OpenAI client and retrieve the assistant
-client = OpenAI(api_key=OPENAI_API_KEY)
-
 # Helper function to initialize session state
-init_session_state(client)
+def init_session_state():
+    if "messages" not in st.session_state:
+        st.session_state["messages"] = []
+    if "thread_id" not in st.session_state:
+        thread = client.beta.threads.create()
+        st.session_state.thread_id = thread.id
+
+# Initialize session state
+init_session_state()
 
 # UI layout
 st.title("Video Course Assistant")
 video_id = st.text_input("Video ID", placeholder="Enter Video ID", value="503")
-language = st.selectbox(
-    "Language", ["English", "Hindi", "Telugu", "Tamil", "Malayalam", "Kannada", "Gujarati", "Marathi", "Bengali", "Punjabi"]
-)
+language = st.selectbox("Language", ["English", "Hindi", "Telugu", "Tamil", "Malayalam", "Kannada", "Gujarati", "Marathi", "Bengali", "Punjabi"])
 
 # Display session information
 st.write(f"**Video ID**: {video_id}")
@@ -36,9 +38,9 @@ elif st.button("Ask a Question"):
 else:
     user_input = None
 
-# Function to send a message to the assistant
+# Function to send message to assistant
 def send_message(prompt):
-    # Append the user message to session state
+    # Append the user message to the session state
     st.session_state["messages"].append({"role": "user", "content": prompt})
     st.write(f"**You:** {prompt}")
 
@@ -66,6 +68,9 @@ def send_message(prompt):
     st.session_state["messages"][-1]["content"] = assistant_response
     st.write(f"**Assistant:** {assistant_response}")
 
+# If there's user input, send it to the assistant
+if user_input:
+    send_message(user_input)
 
 # Display the conversation history
 st.write("### Chat History")
