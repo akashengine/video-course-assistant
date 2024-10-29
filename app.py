@@ -17,8 +17,6 @@ from utils import client  # or set up the client as per your configuration
 # Constants
 ASSISTANT_ID = st.secrets["OPENAI_ASSISTANT_ID"]
 
-# Rest of your code follows...
-
 # Helper function to initialize session state
 def init_session_state():
     if "threads" not in st.session_state:
@@ -133,7 +131,7 @@ def format_annotation(text):
             file_citation = annotation.file_citation
             cited_file = client.files.retrieve(file_citation.file_id)
             citations.append(
-                f"[{index}] {file_citation.quote} from {cited_file.filename}"
+                f"[{index}] {file_citation.excerpt} from {cited_file.filename}"
             )
         elif hasattr(annotation, "file_path"):
             file_path = annotation.file_path
