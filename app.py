@@ -1,86 +1,84 @@
 import os
 import time
-import openai
 import streamlit as st
-
-# Set up OpenAI client with your API key
-openai_client = openai.Client(api_key=os.environ.get("OPENAI_API_KEY"))
-
-# Retrieve the assistant using the provided assistant ID
-assistant = openai_client.beta.assistants.retrieve("asst_FsFGT6vkPNt1ATj1axikkIzT")
-
-# Create the Streamlit app layout
-st.title("Video Course Assistant")
-
-# Input for Video ID
-video_id = st.text_input("Video ID", placeholder="Enter Video ID", value="312")
-
-# Dropdown for Language selection
-language = st.selectbox(
-    "Language",
-    ["English", "Hindi", "Telugu", "Tamil", "Malayalam", "Kannada", "Gujarati", "Marathi", "Bengali", "Punjabi"]
+from openai import OpenAI
+from utils import (
+    StreamHandler,
+    moderation_endpoint,
 )
 
-# Initialize session state to keep track of chat messages
-if "messages" not in st.session_state:
-    st.session_state.messages = []
+# Set Streamlit page config
+st.set_page_config(page_title="Video Course Assistant", layout='wide')
 
-# Display current session information
+# Get secrets
+OPENAI_API_KEY = st.secrets["OPENAI_API_KEY"]
+ASSISTANT_ID = st.secrets["OPENAI_ASSISTANT_ID"]
+
+# Initialize OpenAI client and retrieve the assistant
+client = OpenAI(api_key=OPENAI_API_KEY)
+assistant = client.beta.assistants.retrieve(ASSISTANT_ID)
+
+# Helper function to initialize session state
+def init_session_state():
+    if "messages" not in st.session_state:
+        st.session_state["messages"] = []
+    if "thread_id" not in st.session_state:
+        thread = client.beta.threads.create()
+        st.session_state.thread_id = thread.id
+
+# Initialize session state
+init_session_state()
+
+# UI layout
+st.title("Video Course Assistant")
+video_id = st.text_input("Video ID", placeholder="Enter Video ID", value="503")
+language = st.selectbox("Language", ["English", "Hindi", "Telugu", "Tamil", "Malayalam", "Kannada", "Gujarati", "Marathi", "Bengali", "Punjabi"])
+
+# Display session information
 st.write(f"**Video ID**: {video_id}")
 st.write(f"**Language**: {language}")
 
-# Add buttons for different functionalities
-col1, col2, col3, col4 = st.columns([1, 1, 1, 0.2])
-if col1.button("SUMMARISE"):
+# Buttons for different functionalities
+if st.button("Summarise"):
     user_input = f"Summarise the content of the video with ID {video_id} in {language}."
-elif col2.button("QUIZ ME"):
+elif st.button("Quiz Me"):
     user_input = f"Create a quiz based on the video with ID {video_id} in {language}."
-elif col3.button("ASK A QUESTION"):
-    question = st.text_input("Ask a question about the video:", "")
-    if question:
-        user_input = f"In {language}, answer the following question about video ID {video_id}: {question}"
-    else:
-        user_input = ""
+elif st.button("Ask a Question"):
+    user_input = st.text_input("Type your question here:")
 else:
-    user_input = ""
+    user_input = None
 
-# Function to interact with the assistant
-def get_assistant_response(prompt):
-    # Create a new thread for each new conversation
-    thread = openai_client.beta.threads.create(
-        messages=[{"role": "user", "content": prompt}]
-    )
+# Function to send message to assistant
+def send_message(prompt):
+    # Append the user message to the session state
+    st.session_state["messages"].append({"role": "user", "content": prompt})
 
-    # Run the assistant on the created thread
-    run = openai_client.beta.threads.runs.create(
-        thread_id=thread.id,
-        assistant_id=assistant.id,
-    )
+    # Display user message in chat
+    st.write(f"**You:** {prompt}")
 
-    # Poll for the completion status
-    while run.status != "completed":
-        time.sleep(5)
-        run = openai_client.beta.threads.runs.retrieve(
-            thread_id=thread.id, run_id=run.id
-        )
+    # Add a placeholder for the assistant response
+    st.session_state["messages"].append({"role": "assistant", "content": ""})
 
-    # Retrieve and return the assistant's response
-    messages = openai_client.beta.threads.messages.list(thread_id=thread.id)
-    assistant_reply = messages.data[0].content[0].text.value
-    return assistant_reply
+    # Create a StreamHandler instance
+    handler = StreamHandler()
 
-# When the user submits a message
+    # Run the assistant and stream the response
+    with client.beta.threads.runs.stream(
+        thread_id=st.session_state.thread_id,
+        assistant_id=ASSISTANT_ID,
+        event_handler=handler,
+        temperature=1.0
+    ) as stream:
+        for event in stream:
+            handler.handle_event(event)  # Process each event as it comes in
+
+# If there's user input, send it to the assistant
 if user_input:
-    # Display the user input
-    st.session_state.messages.append({"role": "user", "content": user_input})
-    
-    # Get the assistant response
-    assistant_response = get_assistant_response(user_input)
-    st.session_state.messages.append({"role": "assistant", "content": assistant_response})
+    send_message(user_input)
 
 # Display the conversation history
 st.write("### Chat History")
-for message in st.session_state.messages:
+for message in st.session_state["messages"]:
     if message["role"] == "user":
         st.write(f"**You:** {message['content']}")
     else:
