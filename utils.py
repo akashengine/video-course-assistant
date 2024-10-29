@@ -1,29 +1,38 @@
 # utils.py
 
 import openai
-import pandas as pd
 
-def load_video_titles(file_path):
+def fetch_openai_response(assistant_id, request_type, video_id, language, user_input):
     """
-    Loads the video titles from a CSV file.
-    """
-    video_titles_df = pd.read_csv(file_path)
-    return dict(zip(video_titles_df['video_id'], video_titles_df['file_title_english']))
+    Sends a request to the OpenAI Assistant and retrieves the response.
 
-def fetch_openai_response(request_type, video_id, language, message):
+    Parameters:
+        assistant_id (str): The unique assistant ID provided by OpenAI.
+        request_type (str): Type of request (e.g., Summarize, Quiz Me, Ask a Question).
+        video_id (str): The video ID to pass along in the prompt.
+        language (str): Language preference for the response.
+        user_input (str): User's message or question.
+
+    Returns:
+        str: The response from the OpenAI Assistant.
     """
-    Formats and sends a request to the OpenAI API.
-    """
+    # Format the prompt dynamically based on inputs
     prompt = f"""
     Type of Request: {request_type}
     Video ID: {video_id}
     Language: {language}
-    
-    User Message: {message}
+
+    User Message: {user_input}
     """
-    response = openai.Completion.create(
-        engine="text-davinci-003",
-        prompt=prompt,
-        max_tokens=500
+
+    # Send request to OpenAI Assistant using the new API method
+    response = openai.Assistant.create_run(
+        assistant_id=assistant_id,
+        messages=[
+            {"role": "user", "content": prompt}
+        ]
     )
-    return response.choices[0].text.strip()
+
+    # Extract the assistant's response
+    assistant_message = response["choices"][0]["message"]["content"]
+    return assistant_message
