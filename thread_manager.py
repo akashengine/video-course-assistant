@@ -10,7 +10,8 @@ class ThreadManager:
 
     def create_thread(self):
         # Create a unique ID for each new thread
-        thread_id = str(uuid4())
+        thread = openai.Threads.create()
+        thread_id = thread["id"]
         self.threads[thread_id] = {"history": []}
         return thread_id
 
