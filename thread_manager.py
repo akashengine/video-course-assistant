@@ -4,30 +4,26 @@ import openai
 from uuid import uuid4
 
 class ThreadManager:
-    def __init__(self):
+    def __init__(self, assistant_id):
         self.threads = {}
+        self.assistant_id = assistant_id
 
-    def create_thread(self, assistant_id, initial_message):
+    def create_thread(self):
+        # Create a unique ID for each new thread
         thread_id = str(uuid4())
-        thread = openai.Thread.create(
-            assistant_id=assistant_id,
-            messages=[{"role": "user", "content": initial_message}]
-        )
-        self.threads[thread_id] = {"thread": thread, "history": [], "files": []}
+        self.threads[thread_id] = {"history": []}
         return thread_id
 
-    def get_thread(self, thread_id):
-        return self.threads.get(thread_id)
+    def get_thread_history(self, thread_id):
+        # Retrieve the conversation history for a specific thread
+        return self.threads.get(thread_id, {}).get("history", [])
 
-    def add_message_to_thread(self, thread_id, message, role="user"):
-        thread = self.threads[thread_id]["thread"]
-        thread.messages.create(role=role, content=message)
-        self.threads[thread_id]["history"].append({"role": role, "content": message})
-
-    def attach_file_to_thread(self, thread_id, file_path):
-        message_file = openai.File.create(file=open(file_path, "rb"), purpose="assistants")
-        self.threads[thread_id]["files"].append(message_file.id)
-        return message_file.id
+    def add_message_to_thread(self, thread_id, role, content):
+        # Append a new message to the thread's history
+        if thread_id in self.threads:
+            self.threads[thread_id]["history"].append({"role": role, "content": content})
 
     def reset_thread(self, thread_id):
-        self.threads[thread_id]["history"] = []
+        # Clear the chat history of a specific thread
+        if thread_id in self.threads:
+            self.threads[thread_id]["history"] = []
