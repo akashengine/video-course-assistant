@@ -122,26 +122,18 @@ def create_new_thread(prompt):
 
 # Function to format annotations
 def format_annotation(text):
-    citations = []
     text_value = text.value
     for index, annotation in enumerate(text.annotations):
         text_value = text_value.replace(annotation.text, f" [{index}]")
 
-        if hasattr(annotation, "file_citation"):
-            file_citation = annotation.file_citation
-            cited_file = client.files.retrieve(file_citation.file_id)
-            citations.append(
-                f"[{index}] {file_citation.excerpt} from {cited_file.filename}"
-            )
-        elif hasattr(annotation, "file_path"):
+        if hasattr(annotation, "file_path"):
             file_path = annotation.file_path
             link_tag = create_file_link(
                 annotation.text.split("/")[-1],
                 file_path.file_id,
             )
             text_value = re.sub(r"\[(.*?)\]\s*\(\s*(.*?)\s*\)", link_tag, text_value)
-    if citations:
-        text_value += "\n\n" + "\n".join(citations)
+
     return text_value
 
 # Function to create file links
