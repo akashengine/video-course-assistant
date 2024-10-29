@@ -1,11 +1,10 @@
 import streamlit as st
-from openai import OpenAI
-from utils import client  # import client directly from utils
+from utils import client  # Assuming utils.client is configured correctly
 
 # Set Streamlit page configuration
-st.set_page_config(page_title="Video Course Assistant", layout='wide')
+st.set_page_config(page_title="Video Course Assistant", layout="wide")
 
-# Get assistant ID from secrets
+# Constants
 ASSISTANT_ID = st.secrets["OPENAI_ASSISTANT_ID"]
 
 # Helper function to initialize session state
@@ -21,20 +20,32 @@ init_session_state()
 
 # UI layout
 st.title("Video Course Assistant")
-video_id = st.text_input("Video ID", placeholder="Enter Video ID", value="503")
-language = st.selectbox("Language", ["English", "Hindi", "Telugu", "Tamil", "Malayalam", "Kannada", "Gujarati", "Marathi", "Bengali", "Punjabi"])
 
-# Display session information
-st.write(f"**Video ID**: {video_id}")
-st.write(f"**Language**: {language}")
+# Top bar layout with Video ID, Language, and Session ID
+col1, col2, col3 = st.columns([1, 1, 1])
+with col1:
+    video_id = st.text_input("Video ID", placeholder="Enter Video ID", value="503")
+with col2:
+    language = st.selectbox("Language", ["English", "Hindi", "Telugu", "Tamil", "Malayalam", "Kannada", "Gujarati", "Marathi", "Bengali", "Punjabi"])
+with col3:
+    session_id = st.text_input("Session ID", value="12")
 
-# Buttons for different functionalities
-if st.button("Summarise"):
-    user_input = f"Summarise the content of the video with ID {video_id} in {language}."
-elif st.button("Quiz Me"):
-    user_input = f"Create a quiz based on the video with ID {video_id} in {language}."
-elif st.button("Ask a Question"):
-    user_input = st.text_input("Type your question here:")
+# Display the session information
+st.write(f"**VIDEO ID**: {video_id}")
+st.write(f"**LANGUAGE**: {language}")
+st.write(f"**Session ID**: {session_id}")
+
+# Function buttons
+col4, col5, col6, col7 = st.columns([1, 1, 1, 1])
+with col4:
+    if st.button("Summarise"):
+        user_input = f"Summarise the content of the video with ID {video_id} in {language}."
+with col5:
+    if st.button("Quiz Me"):
+        user_input = f"Create a quiz based on the video with ID {video_id} in {language}."
+with col6:
+    if st.button("Ask a Question"):
+        user_input = st.text_input("Type your question here:")
 else:
     user_input = None
 
@@ -75,12 +86,7 @@ def send_message(prompt):
     )
     
     # Get the latest assistant message
-    for message in messages:
-        if message.role == "assistant":
-            assistant_response = message.content[0].text.value
-            break
-    else:
-        assistant_response = "No response received"
+    assistant_response = next((message.content[0].text.value for message in messages if message.role == "assistant"), "No response received")
     
     # Update the conversation in session state
     st.session_state["messages"].append({
