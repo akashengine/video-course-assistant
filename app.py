@@ -32,7 +32,7 @@ openai_client = openai.Client(api_key=os.environ.get("OPENAI_API_KEY"))
 
 # Retrieve the assistant you want to use
 assistant = openai_client.beta.assistants.retrieve(
-    "<assistant_id>"
+    "asst_FsFGT6vkPNt1ATj1axikkIzT"
 )
 
 # Create the title and subheader for the Streamlit page
