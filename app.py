@@ -1,17 +1,17 @@
 # app.py
 
 import streamlit as st
-import openai
+from openai import OpenAI
 from thread_manager import ThreadManager
 
-# Initialize the OpenAI API key from Streamlit secrets
-openai.api_key = st.secrets["OPENAI_API_KEY"]
+# Initialize the OpenAI client with the API key from Streamlit secrets
+client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 
 # Define the assistant ID
 ASSISTANT_ID = "asst_FsFGT6vkPNt1ATj1axikkIzT"
 
-# Initialize the ThreadManager with the assistant ID
-thread_manager = ThreadManager(ASSISTANT_ID)
+# Initialize the ThreadManager with the assistant ID and client
+thread_manager = ThreadManager(client, ASSISTANT_ID)
 
 # Initialize Streamlit session state for threads
 if "active_thread" not in st.session_state:
@@ -59,28 +59,25 @@ if st.session_state.threads:
             User Message: {user_input}
             """
 
-            # Send the message to the assistant via the thread
-            thread_id = st.session_state.active_thread
-
-            # Add the user message to the thread
-            user_message = openai.Threads.messages.create(
-                thread_id=thread_id,
+            # Create a message in the active thread
+            client.beta.threads.messages.create(
+                thread_id=st.session_state.active_thread,
                 role="user",
                 content=prompt
             )
 
-            # Run the assistant on the thread
-            response = openai.Threads.runs.create(
-                thread_id=thread_id,
+            # Run the assistant on the thread and get the response
+            response = client.beta.threads.runs.create(
+                thread_id=st.session_state.active_thread,
                 assistant_id=ASSISTANT_ID,
             )
 
             # Extract the assistant's response
-            assistant_message = response["choices"][0]["message"]["content"]
+            assistant_message = response["messages"][-1]["content"]
 
             # Update the chat history in the thread manager
-            thread_manager.add_message_to_thread(thread_id, "user", user_input)
-            thread_manager.add_message_to_thread(thread_id, "assistant", assistant_message)
+            thread_manager.add_message_to_thread(st.session_state.active_thread, "user", user_input)
+            thread_manager.add_message_to_thread(st.session_state.active_thread, "assistant", assistant_message)
 
     # Display chat history for the active thread
     chat_history = thread_manager.get_thread_history(st.session_state.active_thread)
