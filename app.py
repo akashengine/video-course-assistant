@@ -35,8 +35,11 @@ st.write(f"**VIDEO ID**: {video_id}")
 st.write(f"**LANGUAGE**: {language}")
 st.write(f"**Session ID**: {session_id}")
 
+# Initialize user_input to None
+user_input = None
+
 # Function buttons
-col4, col5, col6, col7 = st.columns([1, 1, 1, 1])
+col4, col5, col6 = st.columns([1, 1, 1])
 with col4:
     if st.button("Summarise"):
         user_input = f"Summarise the content of the video with ID {video_id} in {language}."
@@ -46,8 +49,6 @@ with col5:
 with col6:
     if st.button("Ask a Question"):
         user_input = st.text_input("Type your question here:")
-    else:
-    user_input = None
 
 # Function to send message to assistant
 def send_message(prompt):
