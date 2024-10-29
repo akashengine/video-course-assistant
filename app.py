@@ -46,7 +46,7 @@ with col5:
 with col6:
     if st.button("Ask a Question"):
         user_input = st.text_input("Type your question here:")
-else:
+    else:
     user_input = None
 
 # Function to send message to assistant
