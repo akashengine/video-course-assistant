@@ -353,7 +353,7 @@ st.write(f"**LANGUAGE**: {language}")
 iframe_url = f"https://console.drishtiias.com/auth_panel/file_manager/library/video_player_tNv50qIN68G1zQpGG1wdXMUcnTCcrER8So/{video_id}"
 
 # Display the video using an iframe
-st.components.v1.iframe(src=iframe_url, width=700, height=400)
+st.components.v1.iframe(src=iframe_url, width=400, height=300)
 
 # Function buttons
 col4, col5, col6, col7 = st.columns([1, 1, 1, 1])
