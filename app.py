@@ -144,7 +144,9 @@ def create_file_link(file_name, file_id):
     link_tag = f'<a href="data:{content_type};base64,{b64}" download="{file_name}">Download Link</a>'
     return link_tag
 
+# Updated video_data list
 video_data = [
+    # Hindi Literature Main Classes
     # Hindi Literature Main Classes
     "498: Hindi Lit Class 01",
     "499: Hindi Lit Class 02",
@@ -335,7 +337,10 @@ st.title("Video Course Assistant")
 # Top bar layout with Video ID and Language
 col1, col2 = st.columns([1, 1])
 with col1:
-    video_id = st.selectbox("Video ID", video_ids, index=video_ids.index("503"))
+    # Use video_data instead of video_ids
+    selected_video = st.selectbox("Video ID", video_data, index=video_data.index("503: Hindi Lit Class 03"))
+    # Extract the video ID from the selected item
+    video_id = selected_video.split(":")[0].strip()
 with col2:
     language = st.selectbox("Language", ["English", "Hindi", "Telugu", "Tamil", "Malayalam", "Kannada", "Gujarati", "Marathi", "Bengali", "Punjabi"])
 
